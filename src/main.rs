@@ -87,7 +87,7 @@ fn run(opts : DayOrAll) {
 fn get_today() -> usize {
   let now = Local::now();
   let now_day = now.day();
-  if now.month() == 12 && now_day >= 1 && now_day <= 25 {
+  if now.month() == 12 && (1..=25).contains(&now_day) {
     now_day.try_into().unwrap()
   } else {
     panic!("Today is not a valid Advent of Code day. Please specify a day");
@@ -95,7 +95,7 @@ fn get_today() -> usize {
 }
 
 fn day_range_check(day: usize) -> usize {
-  if day >= 1 && day <= 25 {
+  if (1..=25).contains(&day) {
     day
   } else {
     panic!("{} is not a valid day. Only days 1-25 are allowed.", day)
