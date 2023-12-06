@@ -1,25 +1,61 @@
+use nom::bytes::complete::tag;
+use nom::character::complete::{newline, space1, u64};
+use nom::multi::separated_list0;
 use nom::IResult;
 
 use crate::days::Day;
 
 pub struct Day06;
 
+fn run_race((time, distance): &(u64, u64)) -> usize {
+  (1..*time as usize)
+    .filter(|charge_time| {
+      let run_time = *time as usize - charge_time;
+      let res = run_time * charge_time;
+      res > *distance as usize
+    })
+    .count()
+}
+
+fn combine_numbers(input: &[u64]) -> u64 {
+  let mut res: u64 = **input.first().get_or_insert(&0);
+  for i in input.iter().skip(1) {
+    for j in 1..=10 {
+      if u64::pow(10, j) >= *i {
+        res *= u64::pow(10, j);
+        res += *i;
+        break;
+      }
+    }
+  }
+  res
+}
+
 impl Day for Day06 {
-  type Input = String;
+  type Input = Vec<(u64, u64)>;
 
-  fn parse(_input: &str) -> IResult<&str, Self::Input> {
-    unimplemented!("parser")
+  fn parse(input: &str) -> IResult<&str, Self::Input> {
+    let (input, _) = tag("Time:")(input)?;
+    let (input, _) = space1(input)?;
+    let (input, times) = separated_list0(space1, u64)(input)?;
+    let (input, _) = newline(input)?;
+    let (input, _) = tag("Distance:")(input)?;
+    let (input, _) = space1(input)?;
+    let (input, distances) = separated_list0(space1, u64)(input)?;
+    Ok((input, times.into_iter().zip(distances).collect()))
   }
 
-  type Output1 = String;
+  type Output1 = usize;
 
-  fn part_1(_input: &Self::Input) -> Self::Output1 {
-    unimplemented!("part_1")
+  fn part_1(input: &Self::Input) -> Self::Output1 {
+    input.iter().map(run_race).product::<usize>()
   }
 
-  type Output2 = String;
+  type Output2 = usize;
 
-  fn part_2(_input: &Self::Input) -> Self::Output2 {
-    unimplemented!("part_2")
+  fn part_2(input: &Self::Input) -> Self::Output2 {
+    let time = combine_numbers(&input.iter().map(|x| x.0).collect::<Vec<u64>>());
+    let distance = combine_numbers(&input.iter().map(|x| x.1).collect::<Vec<u64>>());
+    run_race(&(time, distance))
   }
 }
