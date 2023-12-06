@@ -7,14 +7,22 @@ use crate::days::Day;
 
 pub struct Day06;
 
+fn is_winning_tactic(time: &u64, distance: &u64, charge_time: usize) -> bool {
+  let run_time = *time as usize - charge_time;
+  let res = run_time * charge_time;
+  res > *distance as usize
+}
+
 fn run_race((time, distance): &(u64, u64)) -> usize {
-  (1..*time as usize)
-    .filter(|charge_time| {
-      let run_time = *time as usize - charge_time;
-      let res = run_time * charge_time;
-      res > *distance as usize
-    })
-    .count()
+  // Binary search would be great here, but I'm too lazy to do it
+  let min = (1..*time as usize)
+    .find(|charge_time| is_winning_tactic(time, distance, *charge_time))
+    .unwrap();
+  let max = (1..*time as usize)
+    .rev()
+    .find(|charge_time| is_winning_tactic(time, distance, *charge_time))
+    .unwrap();
+  max - min + 1
 }
 
 fn combine_numbers(input: &[u64]) -> u64 {
