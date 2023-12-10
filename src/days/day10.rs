@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use std::collections::{HashMap, HashSet};
 use nom::branch::alt;
 use nom::character::complete::{char, newline};
 use nom::combinator::map as pmap;
@@ -35,11 +34,9 @@ fn parse_pipe(input: &str) -> IResult<&str, Pipe> {
   ))(input)
 }
 
-fn next_move(
-  hm: &HashMap<(i16, i16), Pipe>,
-  prev_pos: (i16, i16),
-  cur_pos: (i16, i16),
-) -> Option<(i16, i16)> {
+type Pos = (i16, i16);
+
+fn next_move(hm: &HashMap<Pos, Pipe>, prev_pos: Pos, cur_pos: Pos) -> Option<Pos> {
   let p = hm.get(&cur_pos)?;
   let (x, y) = cur_pos;
   let poses = match *p {
@@ -51,7 +48,7 @@ fn next_move(
     Pipe::SE => Some([(x, y + 1), (x + 1, y)]),
     _ => None,
   }?;
-  let filtered: Vec<&(i16, i16)> = poses.iter().filter(|pos| **pos != prev_pos).collect();
+  let filtered: Vec<&Pos> = poses.iter().filter(|pos| **pos != prev_pos).collect();
   if filtered.len() != 1 {
     None
   } else {
@@ -59,9 +56,9 @@ fn next_move(
   }
 }
 
-fn find_loop(hm: &HashMap<(i16, i16), Pipe>) -> Vec<(i16, i16)> {
+fn find_loop(hm: &HashMap<Pos, Pipe>) -> Vec<Pos> {
   let (&start, _) = hm.iter().find(|(_, p)| p == &&Pipe::Start).unwrap();
-  let mut loops: Vec<Vec<(i16, i16)>> = vec![];
+  let mut loops: Vec<Vec<Pos>> = vec![];
   let (x, y) = start;
   for p in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)] {
     let mut prev = start;
@@ -86,17 +83,19 @@ fn find_loop(hm: &HashMap<(i16, i16), Pipe>) -> Vec<(i16, i16)> {
     .to_owned()
 }
 
-fn flood_fill(pos: (i16, i16), l: &[(i16, i16)]) -> (bool, Vec<(i16, i16)>) {
-  let mut res = vec![];
+fn flood_fill(
+  pos: Pos,
+  l: &HashSet<Pos>,
+  minx: i16,
+  maxx: i16,
+  miny: i16,
+  maxy: i16,
+) -> (bool, HashSet<Pos>) {
+  let mut res = HashSet::new();
   let mut enclosed = true;
   let mut stack = vec![pos];
-  let minx = l.iter().map(|p| p.0).min().unwrap();
-  let maxx = l.iter().map(|p| p.0).max().unwrap();
-  let miny = l.iter().map(|p| p.1).min().unwrap();
-  let maxy = l.iter().map(|p| p.1).max().unwrap();
   while let Some(p) = stack.pop() {
-    if !l.contains(&p) && !res.contains(&p) {
-      res.push(p);
+    if !l.contains(&p) && res.insert(p) {
       let (x, y) = p;
       if x <= minx || x >= maxx || y <= miny || y >= maxy {
         enclosed = false;
@@ -113,7 +112,7 @@ fn flood_fill(pos: (i16, i16), l: &[(i16, i16)]) -> (bool, Vec<(i16, i16)>) {
 }
 
 impl Day for Day10 {
-  type Input = HashMap<(i16, i16), Pipe>;
+  type Input = HashMap<Pos, Pipe>;
 
   fn parse(input: &str) -> IResult<&str, Self::Input> {
     let (input, pipes) = separated_list0(newline, many1(parse_pipe))(input)?;
@@ -143,25 +142,32 @@ impl Day for Day10 {
     l.push(start);
     l.insert(0, start);
 
-    let mut l2 = vec![];
-    l2.push((l[0].0 * 2, l[0].1 * 2));
+    let mut hm2 = HashSet::new();
+    hm2.insert((l[0].0 * 2, l[0].1 * 2));
     for i in 1..l.len() {
       let (prevx, prevy) = l[i - 1];
       let (curx, cury) = l[i];
       let (newx, newy) = (curx * 2, cury * 2);
       let (dx, dy) = ((newx - prevx * 2) / 2, (newy - prevy * 2) / 2);
-      l2.push((prevx * 2 + dx, prevy * 2 + dy));
-      l2.push((newx, newy));
+      hm2.insert((prevx * 2 + dx, prevy * 2 + dy));
+      hm2.insert((newx, newy));
     }
 
-    let minx = l2.iter().map(|p| p.0).min().unwrap();
-    let maxx = l2.iter().map(|p| p.0).max().unwrap();
-    let miny = l2.iter().map(|p| p.1).min().unwrap();
-    let maxy = l2.iter().map(|p| p.1).max().unwrap();
+    let (minx, maxx, miny, maxy) = hm2.iter().fold(
+      (i16::MAX, i16::MIN, i16::MAX, i16::MIN),
+      |(minx, maxx, miny, maxy), (x, y)| {
+        (
+          i16::min(*x, minx),
+          i16::max(*x, maxx),
+          i16::min(*y, miny),
+          i16::max(*y, maxy),
+        )
+      },
+    );
     let mut candidates = vec![];
     for y in miny + 1..maxy {
       for x in minx + 1..maxx {
-        if !l2.contains(&(x, y)) && x % 2 == 0 && y % 2 == 0 {
+        if !hm2.contains(&(x, y)) && x % 2 == 0 && y % 2 == 0 {
           candidates.push((x, y));
         }
       }
@@ -170,7 +176,7 @@ impl Day for Day10 {
     let mut enclosed_counter = 0;
 
     while let Some(c) = candidates.pop() {
-      let (enclosed, filled) = flood_fill(c, &l2);
+      let (enclosed, filled) = flood_fill(c, &hm2, minx, maxx, miny, maxy);
       if enclosed {
         enclosed_counter += filled
           .iter()
