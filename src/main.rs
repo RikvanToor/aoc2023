@@ -6,6 +6,7 @@ use std::fs;
 use std::time::Instant;
 
 mod days;
+mod utils;
 
 const YEAR: usize = 2023;
 
