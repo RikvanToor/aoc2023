@@ -14,6 +14,12 @@ pub struct Pos {
   pub y: i32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Pos64 {
+  pub x: i64,
+  pub y: i64,
+}
+
 pub type Grid<A> = HashMap<Pos, A>;
 
 impl ops::Add<Pos> for Pos {
@@ -21,6 +27,17 @@ impl ops::Add<Pos> for Pos {
 
   fn add(self, rhs: Pos) -> Pos {
     Pos {
+      x: self.x + rhs.x,
+      y: self.y + rhs.y,
+    }
+  }
+}
+
+impl ops::Add<Pos64> for Pos64 {
+  type Output = Pos64;
+
+  fn add(self, rhs: Pos64) -> Pos64 {
+    Pos64 {
       x: self.x + rhs.x,
       y: self.y + rhs.y,
     }
