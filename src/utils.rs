@@ -75,3 +75,9 @@ pub fn parse_grid<I, O, E, F>(mut one_char_parser: F) -> impl FnMut(I) -> IResul
     Ok((input, res))
   }
 }
+
+pub fn grid_max_dims<A>(grid: &Grid<A>) -> (i32, i32) {
+  grid.iter().fold((0, 0), |(maxx, maxy), (p, _)| {
+    (i32::max(maxx, p.x), i32::max(maxy, p.y))
+  })
+}
