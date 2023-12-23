@@ -118,7 +118,9 @@ where
 }
 
 fn simplify_step(successors: &mut HashMap<Pos, Vec<(Pos, usize)>>) -> bool {
-  for (p, nexts) in successors.clone() {
+  let mut changed = false;
+  for (p, _) in successors.clone() {
+    let nexts = successors.get(&p).unwrap();
     if nexts.len() == 2 {
       let (p1, n1) = nexts[0];
       let (p2, n2) = nexts[1];
@@ -129,10 +131,10 @@ fn simplify_step(successors: &mut HashMap<Pos, Vec<(Pos, usize)>>) -> bool {
       s2.retain(|(q, _)| *q != p);
       s2.push((p1, n2 + n1));
       successors.remove(&p);
-      return true;
+      changed = true;
     }
   }
-  false
+  changed
 }
 
 impl Day for Day23 {
